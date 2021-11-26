@@ -3,8 +3,7 @@ Description=Fritzbox DynDNS Service
 
 [Service]
 Type=simple
-ExecStart=/usr/local/lib/fritzbox_dyndns_update/bin/python3 \
-	/usr/local/lib/fritzbox_dyndns_update/fritzbox_dyndns_update.py \
+ExecStart=/usr/local/lib/fritzbox_dyndns_update/fritzbox_dyndns_update.py \
 	--config /etc/fritzbox_dyndns_update.ini
 Restart=no
 
