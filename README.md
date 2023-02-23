@@ -10,7 +10,8 @@ your dynamic DNS. Example for he.net:
 
     usage: fritzbox_dyndns_update.py [-h] [-n] [-q] [-d] [-s SEC]
                                      [--config CONFIG] [--no-ipv4] [-6]
-                                     [-a IP/addr] [-p passwd] [-U URL] [-P passwd]
+                                     [--ipv6-suffix IPV6_SUFFIX] [-a IP/addr]
+                                     [-p passwd] [-U URL] [-P passwd]
                                      [-H hostname]
     
     options:
@@ -24,6 +25,9 @@ your dynamic DNS. Example for he.net:
       --config CONFIG       Config file [def: /etc/fritzconneciton.ini]
       --no-ipv4             Skip IPv4 (default: only v4)
       -6, --ipv6            Enable IPv6 (default: only v4)
+      --ipv6-suffix IPV6_SUFFIX
+                            Specify ::1:2/32 to replace, e.g. the lowest 32 bits
+                            with the given bits.
     
     Fritz!Box:
       -a IP/addr, --fritzbox_address IP/addr

@@ -9,6 +9,17 @@ from urllib.request import urlopen
 from urllib.parse import urlencode
 from pathlib import Path
 from fritzconnection import FritzConnection
+from ipaddress import IPv6Address, IPv6Interface
+
+
+def merge_v6_addr_sfx(addr: IPv6Address, sfx: IPv6Interface) -> IPv6Address:
+    addr_b = addr.packed
+    sfx_b = sfx.packed
+    nm_b = sfx.netmask.packed
+    merged_b = bytes([(a & n) | (s & ~n)
+                     for a, s, n in zip(addr_b, sfx_b, nm_b)])
+
+    return IPv6Address(merged_b)
 
 # def print_status(fs):
 #    print("FritzStatus:\n")
@@ -50,6 +61,8 @@ def main():
                      help='Skip IPv4 (default: only v4)')
     grp.add_argument('-6', '--ipv6', action='store_true',
                      help='Enable IPv6 (default: only v4)')
+    grp.add_argument('--ipv6-suffix', type=IPv6Interface,
+                     help='Specify ::1:2/32 to replace, e.g. the lowest 32 bits with the given bits.')
 
     grp = parser.add_argument_group('Fritz!Box')
     grp.add_argument('-a', '--fritzbox_address', type=str,
@@ -136,6 +149,12 @@ def main():
                 else:
                     info(
                         f'{family} address is {this_addr}, was {last_by_family[family]} (changed).')
+
+            if args.ipv6_suffix is not None and family == 'ipv6':
+                fixup_addr = merge_v6_addr_sfx(
+                    IPv6Address(this_addr), args.ipv6_suffix).compressed
+                info(f'Merge {this_addr} + {args.ipv6_suffix} -> {fixup_addr}')
+                this_addr = fixup_addr
 
             if args.dry_run:
                 info('Dry run, no update.')
