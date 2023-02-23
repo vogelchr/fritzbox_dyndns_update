@@ -3,7 +3,7 @@ import logging
 from logging import debug, info, warning, error, fatal
 import sys
 from configargparse import ArgumentParser
-#from configparser import ConfigParser
+# from configparser import ConfigParser
 from time import sleep
 from urllib.request import urlopen
 from urllib.parse import urlencode
@@ -46,8 +46,10 @@ def main():
                      is_config_file=True,
                      default='/etc/fritzconneciton.ini',
                      help='Config file [def: %(default)s]')
-    grp.add_argument('--no-ipv4', action='store_true', help='Skip IPv4 (default: only v4)')
-    grp.add_argument('-6', '--ipv6', action='store_true', help='Enable IPv6 (default: only v4)')
+    grp.add_argument('--no-ipv4', action='store_true',
+                     help='Skip IPv4 (default: only v4)')
+    grp.add_argument('-6', '--ipv6', action='store_true',
+                     help='Enable IPv6 (default: only v4)')
 
     grp = parser.add_argument_group('Fritz!Box')
     grp.add_argument('-a', '--fritzbox_address', type=str,
@@ -95,33 +97,35 @@ def main():
             debug(f'Sleeping for {args.sleep} seconds.')
             sleep(args.sleep)
 
-        for family in ['ipv4', 'ipv6'] :
+        for family in ['ipv4', 'ipv6']:
 
-            if family == 'ipv4' and args.no_ipv4 :
+            if family == 'ipv4' and args.no_ipv4:
                 continue
-            if family == 'ipv6' and not args.ipv6 :
+            if family == 'ipv6' and not args.ipv6:
                 continue
 
             this_addr = None
-            if not family in last_by_family :
+            if not family in last_by_family:
                 last_by_family[family] = None
 
             try:
-                if family == 'ipv4' :
+                if family == 'ipv4':
                     ret = fc.call_action('WANIPConn', 'GetExternalIPAddress')
                     this_addr = ret['NewExternalIPAddress'].strip().lower()
-                else :
-                    ret = fc.call_action('WANIPConn', 'X_AVM_DE_GetExternalIPv6Address')
+                else:
+                    ret = fc.call_action(
+                        'WANIPConn', 'X_AVM_DE_GetExternalIPv6Address')
                     this_addr = ret['NewExternalIPv6Address'].strip().lower()
             except Exception as exc:
-                warning(f'Exception {repr(exc)} raised during Fritz!BOX query.')
-
+                warning(
+                    f'Exception {repr(exc)} raised during Fritz!BOX query.')
 
             if not this_addr or this_addr == last_by_family[family]:
                 if this_addr is None:
                     warning(f'{family} address is not known.')
                 else:
-                    debug(f'{family} address is {last_by_family[family]} (unchanged).')
+                    debug(
+                        f'{family} address is {last_by_family[family]} (unchanged).')
                 continue
 
             # now update...
@@ -133,7 +137,7 @@ def main():
                     info(
                         f'{family} address is {this_addr}, was {last_by_family[family]} (changed).')
 
-            if args.dry_run :
+            if args.dry_run:
                 info('Dry run, no update.')
                 last_by_family[family] = this_addr
                 continue
@@ -141,7 +145,8 @@ def main():
             try:
                 update_payload = urlencode({'hostname': args.dyndns_hostname,
                                             'password': args.dyndns_password, 'myip': this_addr}).encode('ascii')
-                debug(f'POST to {args.dyndns_url} with payload {update_payload}.')
+                debug(
+                    f'POST to {args.dyndns_url} with payload {update_payload}.')
                 resp = urlopen(args.dyndns_url, update_payload)
                 content = resp.read().strip().decode('ascii')
                 debug(f'POST result code {resp.code}, content: {content}')
