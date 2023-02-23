@@ -155,8 +155,11 @@ def main():
                 status = status.lower().strip()
 
                 if resp.code == 200 and status in ['good', 'nochg']:
-                    debug(f'Good update.')
+                    debug(f'{family}: Good update, status {status}.')
                     last_by_family[family] = this_addr
+                else:
+                    error(
+                        f'{family}: Bad update, resonse code {resp.code} and status {status}.')
 
             except Exception as exc:
                 warning(f'Exception {repr(exc)} raised during DDNS update!')
