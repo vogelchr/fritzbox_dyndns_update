@@ -36,6 +36,7 @@ def main():
     parser = ArgumentParser()
 
     grp = parser.add_argument_group('Program Control')
+    grp.add_argument('-n', '--dry-run', action='store_true')
     grp.add_argument('-q', '--quiet', action='store_true')
     grp.add_argument('-d', '--debug', action='store_true')
     grp.add_argument('-s', '--sleep', type=int, default=60,
@@ -45,6 +46,8 @@ def main():
                      is_config_file=True,
                      default='/etc/fritzconneciton.ini',
                      help='Config file [def: %(default)s]')
+    grp.add_argument('--no-ipv4', action='store_true', help='Skip IPv4 (default: only v4)')
+    grp.add_argument('-6', '--ipv6', action='store_true', help='Enable IPv6 (default: only v4)')
 
     grp = parser.add_argument_group('Fritz!Box')
     grp.add_argument('-a', '--fritzbox_address', type=str,
@@ -82,7 +85,7 @@ def main():
     fc = FritzConnection(address=args.fritzbox_address,
                          password=args.fritzbox_password)
 
-    last_ipv4 = None
+    last_by_family = dict()
     first_round = True
 
     while True:
@@ -92,50 +95,66 @@ def main():
             debug(f'Sleeping for {args.sleep} seconds.')
             sleep(args.sleep)
 
-        this_ipv4 = None
-        try:
-            ipv4_ret = fc.call_action('WANIPConn', 'GetExternalIPAddress')
-            this_ipv4 = ipv4_ret['NewExternalIPAddress'].strip().lower()
-        except Exception as exc:
-            warning(f'Exception {repr(exc)} raised during Fritz!BOX query.')
+        for family in ['ipv4', 'ipv6'] :
 
-#       for when we want to support ipv6
-#        ipv6_ret = fc.call_action('WANIPConn', 'X_AVM_DE_GetExternalIPv6Address')
-#        this_ipv6 = ipv6_ret['NewExternalIPv6Address'].strip().lower()
+            if family == 'ipv4' and args.no_ipv4 :
+                continue
+            if family == 'ipv6' and not args.ipv6 :
+                continue
 
-        if not this_ipv4 or this_ipv4 == last_ipv4:
-            if this_ipv4 is None:
-                warning(f'IPv4 address is not known.')
-            else:
-                debug(f'IPv4 address is {last_ipv4} (unchanged).')
-            continue
+            this_addr = None
+            if not family in last_by_family :
+                last_by_family[family] = None
 
-        # now update...
-        if this_ipv4 and this_ipv4 != last_ipv4:
-            # this branch updates
-            if last_ipv4 is None:
-                info(f'IPv4 address is {this_ipv4} (initial).')
-            else:
-                info(
-                    f'IPv4 address is {this_ipv4}, was {last_ipv4} (changed).')
+            try:
+                if family == 'ipv4' :
+                    ret = fc.call_action('WANIPConn', 'GetExternalIPAddress')
+                    this_addr = ret['NewExternalIPAddress'].strip().lower()
+                else :
+                    ret = fc.call_action('WANIPConn', 'X_AVM_DE_GetExternalIPv6Address')
+                    this_addr = ret['NewExternalIPv6Address'].strip().lower()
+            except Exception as exc:
+                warning(f'Exception {repr(exc)} raised during Fritz!BOX query.')
 
-        try:
-            update_payload = urlencode({'hostname': args.dyndns_hostname,
-                                        'password': args.dyndns_password, 'myip': this_ipv4}).encode('ascii')
-            debug(f'POST to {args.dyndns_url} with payload {update_payload}.')
-            resp = urlopen(args.dyndns_url, update_payload)
-            content = resp.read().strip().decode('ascii')
-            debug(f'POST result code {resp.code}, content: {content}')
 
-            status, *_ = content.split()
-            status = status.lower().strip()
+            if not this_addr or this_addr == last_by_family[family]:
+                if this_addr is None:
+                    warning(f'{family} address is not known.')
+                else:
+                    debug(f'{family} address is {last_by_family[family]} (unchanged).')
+                continue
 
-            if resp.code == 200 and status in ['good', 'nochg']:
-                debug(f'Good update.')
-                last_ipv4 = this_ipv4
+            # now update...
+            if this_addr and this_addr != last_by_family[family]:
+                # this branch updates
+                if last_by_family[family] is None:
+                    info(f'{family} address is {this_addr} (initial).')
+                else:
+                    info(
+                        f'{family} address is {this_addr}, was {last_by_family[family]} (changed).')
 
-        except Exception as exc:
-            warning(f'Exception {repr(exc)} raised during DDNS update!')
+            if args.dry_run :
+                info('Dry run, no update.')
+                last_by_family[family] = this_addr
+                continue
+
+            try:
+                update_payload = urlencode({'hostname': args.dyndns_hostname,
+                                            'password': args.dyndns_password, 'myip': this_addr}).encode('ascii')
+                debug(f'POST to {args.dyndns_url} with payload {update_payload}.')
+                resp = urlopen(args.dyndns_url, update_payload)
+                content = resp.read().strip().decode('ascii')
+                debug(f'POST result code {resp.code}, content: {content}')
+
+                status, *_ = content.split()
+                status = status.lower().strip()
+
+                if resp.code == 200 and status in ['good', 'nochg']:
+                    debug(f'Good update.')
+                    last_by_family[family] = this_addr
+
+            except Exception as exc:
+                warning(f'Exception {repr(exc)} raised during DDNS update!')
 
 
 if __name__ == "__main__":
