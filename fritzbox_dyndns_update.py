@@ -133,37 +133,35 @@ def main():
                 warning(
                     f'Exception {repr(exc)} raised during Fritz!BOX query.')
 
-            if not this_addr or this_addr == last_by_family[family]:
-                if this_addr is None:
-                    warning(f'{family} address is not known.')
-                else:
-                    debug(
-                        f'{family} address is {last_by_family[family]} (unchanged).')
+            if this_addr is None:
+                warning(f'{family} address is not known.')
                 continue
 
-            # now update...
-            if this_addr and this_addr != last_by_family[family]:
-                # this branch updates
-                if last_by_family[family] is None:
-                    info(f'{family} address is {this_addr} (initial).')
-                else:
-                    info(
-                        f'{family} address is {this_addr}, was {last_by_family[family]} (changed).')
+            if this_addr == last_by_family[family]:
+                debug(
+                    f'{family} address is {last_by_family[family]} (unchanged).')
+                continue
 
+            if last_by_family[family] is None:
+                info(f'{family} address is {this_addr} (initial).')
+            else:
+                info(
+                    f'{family} address is {this_addr}, was {last_by_family[family]} (changed).')
+
+            update_addr = this_addr
             if args.ipv6_suffix is not None and family == 'ipv6':
-                fixup_addr = merge_v6_addr_sfx(
+                update_addr = merge_v6_addr_sfx(
                     IPv6Address(this_addr), args.ipv6_suffix).compressed
-                info(f'Merge {this_addr} + {args.ipv6_suffix} -> {fixup_addr}')
-                this_addr = fixup_addr
+                info(f'{family} suffix changes {this_addr} -> {update_addr}')
 
             if args.dry_run:
-                info('Dry run, no update.')
+                info(f'Dry run, would update {family} to {update_addr}.')
                 last_by_family[family] = this_addr
                 continue
 
             try:
                 update_payload = urlencode({'hostname': args.dyndns_hostname,
-                                            'password': args.dyndns_password, 'myip': this_addr}).encode('ascii')
+                                            'password': args.dyndns_password, 'myip': update_addr}).encode('ascii')
                 debug(
                     f'POST to {args.dyndns_url} with payload {update_payload}.')
                 resp = urlopen(args.dyndns_url, update_payload)

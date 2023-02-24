@@ -31,3 +31,6 @@ if ! [ -f "/etc/$cfg" ] ; then
 fi
 
 sudo install -m644 "$unit" "/etc/systemd/system/$unit"
+
+sudo systemctl daemon-reload
+sudo systemctl restart fritzbox_dyndns_update
