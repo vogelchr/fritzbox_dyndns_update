@@ -133,7 +133,7 @@ def main():
                 warning(
                     f'Exception {repr(exc)} raised during Fritz!BOX query.')
 
-            if this_addr is None:
+            if not this_addr:
                 warning(f'{family} address is not known.')
                 continue
 
