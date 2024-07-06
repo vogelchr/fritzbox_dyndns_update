@@ -1,11 +1,14 @@
 [Unit]
 Description=Fritzbox DynDNS Service
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
 ExecStart=/usr/local/lib/fritzbox_dyndns_update/fritzbox_dyndns_update.py \
 	--config /etc/fritzbox_dyndns_update.ini
 Restart=no
+
 
 [Install]
 WantedBy=multi-user.target
