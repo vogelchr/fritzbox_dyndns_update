@@ -97,8 +97,24 @@ def main():
         print('You need to specify the password in the config file or on the command line!')
         sys.exit(1)
 
-    fc = FritzConnection(address=args.fritzbox_address,
-                         password=args.fritzbox_password)
+    fc = None
+    connection_attempts = 5
+
+    while connection_attempts and fc is None:
+        try:
+            fc = FritzConnection(address=args.fritzbox_address,
+                                 password=args.fritzbox_password)
+            info(f'Connection established to {args.fritzbox_address}.')
+        except Exception as exc:
+            error(f'Cannot establish connection: {repr(exc)}')
+            connection_attempts -= 1
+            if connection_attempts:
+                info(f'{connection_attempts} attempts remaining...')
+                sleep(5.0)
+
+    if fc is None:
+        error(f'Could not establish connetion to Fritz!Box. Exiting.')
+        sys.exit(1)
 
     last_by_family = dict()
     first_round = True
