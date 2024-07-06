@@ -46,10 +46,16 @@ def merge_v6_addr_sfx(addr: IPv6Address, sfx: IPv6Interface) -> IPv6Address:
 def main():
     parser = ArgumentParser()
 
+    grp = parser.add_argument_group('Logging')
+    grp.add_argument('-q', '--quiet', action='store_true',
+                     help='Decrease verbosity.')
+    grp.add_argument('-d', '--debug', action='store_true',
+                     help='Increase verbosity.')
+    grp.add_argument('-j', '--journal', action='store_true',
+                     help='Log to systemd journal, not stderr.')
+
     grp = parser.add_argument_group('Program Control')
     grp.add_argument('-n', '--dry-run', action='store_true')
-    grp.add_argument('-q', '--quiet', action='store_true')
-    grp.add_argument('-d', '--debug', action='store_true')
     grp.add_argument('-s', '--sleep', type=int, default=60,
                      metavar='SEC',
                      help='Sleep SEC seconds between checks [def: %(default)d]')
@@ -91,7 +97,13 @@ def main():
     if args.debug:
         lvl = logging.DEBUG
 
-    logging.basicConfig(level=lvl, format='%(asctime)-15s %(message)s')
+    if args.journal:
+        from systemd.journal import JournalHandler
+        handler = JournalHandler(SYSLOG_IDENTIFIER=Path(__file__).stem)
+        logging.basicConfig(
+            level=lvl, format='%(message)s', handlers=[handler])
+    else:
+        logging.basicConfig(level=lvl, format='%(asctime)-15s %(message)s')
 
     if args.fritzbox_password is None:
         print('You need to specify the password in the config file or on the command line!')

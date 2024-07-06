@@ -12,8 +12,10 @@ gid=`id -g`
 target=/usr/local/lib/fritzbox_dyndns_update
 
 sudo install -m755 "-o$uid" "-g$gid" -d "$target"
-virtualenv $target
-$target/bin/pip install fritzconnection ConfigArgParse
+
+# system-site-packages required for systemd.journal!
+virtualenv --system-site-packages $target
+$target/bin/pip install fritzconnection ConfigArgParse 
 
 tmp=`mktemp ./temp.XXXX`
 (
