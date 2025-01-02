@@ -77,7 +77,11 @@ def main():
     )
 
     for n in range(0, num_hosts):
-        host = fh.get_generic_host_entry(n)
+        try :
+            host = fh.get_generic_host_entry(n)
+        except fritzconnection.core.exceptions.FritzArrayIndexError :
+            print(f'{n:<3} **EXCEPTION RAISED!**')
+            continue
         ip = host.get("NewIPAddress", "?")
         addrtype = host.get("NewAddressSource", "?")
         name = host.get("NewHostName", "?")
